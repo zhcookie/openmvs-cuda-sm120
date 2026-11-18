@@ -1,12 +1,13 @@
 <#
 .SYNOPSIS
-    不装 CUDA Toolkit，直接读出 Windows PE 里内嵌的 CUDA GPU 内核架构（sm_XX）。
+    读取 Windows PE 文件内嵌的 CUDA GPU 内核架构（sm_XX），无需安装 CUDA Toolkit。
 .DESCRIPTION
-    做法：在文件字节里找 CUDA fatbin 魔数 0xBA55ED50，再找其中的 ELF64 cubin 头，
-    从 e_flags 取架构位 -> sm_NN。然后与字符串扫描结果交叉对比。
-    等价于 `cuobjdump <exe>` 里的 `arch = sm_XX`，但不需要装 CUDA Toolkit。
+    实现方式：在文件字节中定位 CUDA fatbin 魔数 0xBA55ED50，解析其中的 ELF64
+    cubin 头，由 e_flags 字段计算架构编号（arch = (e_flags >> 8) & 0xFF），
+    并以字符串扫描结果作交叉核对。
+    输出含义与 cuobjdump 的 `arch = sm_XX` 一致，但不依赖 CUDA Toolkit。
 .PARAMETER Path
-    一个或多个 .exe / .dll / .cubin 路径。
+    一个或多个 .exe / .dll / .cubin 文件路径，支持管道输入。
 .EXAMPLE
     .\check_cuda_arch.ps1 ..\bin\DensifyPointCloud.exe
 .EXAMPLE

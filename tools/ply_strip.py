@@ -1,26 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-ply_strip.py —— 剥离 OpenMVS PLY 输出里的可变长 `property list` 字段
+ply_strip.py — 剥离 OpenMVS 输出 PLY 中的可变长属性
 
-为什么需要它
-------------
-OpenMVS 的稠密点云 PLY 每个点后面跟两个可变长列表（该点被哪些相机看到 + 对应权重）：
+用途
+----
+OpenMVS 输出的稠密点云 PLY 为每个顶点附加两个可变长属性，分别记录该点被哪些
+视图观测及对应权重：
 
     property list ... view_indices
     property list ... view_weights
 
-CloudCompare 的 PLY 解析器不支持可变长属性，打开直接报 `nothing to load`。
-本脚本只保留 x,y,z (float32) + red,green,blue (uint8) + nx,ny,nz (float32)，
-共 27 字节/点，文件体积约降到原来的 43%，CloudCompare 正常加载。
+CloudCompare 的 PLY 解析器不支持可变长属性，加载时报告 `nothing to load`。
+本工具仅保留 x, y, z（float32）、red, green, blue（uint8）与 nx, ny, nz（float32），
+固定为 27 字节/顶点，输出体积约为原始文件的 43%，可被 CloudCompare 正常加载。
 
-用法
-----
+调用方式
+--------
     python ply_strip.py scene_dense.ply scene_dense_clean.ply
 
-输入必须是 OpenMVS 输出的 binary_little_endian PLY。脚本按 **4 字节/项** 跳读
-两个列表（OpenMVS 2.3.0 的实际导出格式即如此）；若你的版本元素宽度不同，
-只需改下面两行 `pos += 1 + c * 4` 里的倍数。
+输入须为 OpenMVS 输出的 binary_little_endian 格式 PLY。脚本按 4 字节/项跳读两个
+可变长属性（OpenMVS 2.3.0 的导出格式即为此）；若目标版本的元素宽度不同，调整下方
+两处 `pos += 1 + c * 4` 中的乘数即可。
 """
 
 import struct
@@ -58,9 +59,9 @@ def strip_lists(src_path, dst_path):
         chunk.append(data[pos:pos + 27])
         pos += 27
         c = data[pos]
-        pos += 1 + c * 4        # view_indices: 1 字节计数 + c 项
+        pos += 1 + c * 4        # view_indices：1 字节计数 + c 项
         c = data[pos]
-        pos += 1 + c * 4        # view_weights: 1 字节计数 + c 项
+        pos += 1 + c * 4        # view_weights：1 字节计数 + c 项
         if len(chunk) >= CHUNK:
             out.write(b''.join(chunk))
             chunk = []
@@ -71,7 +72,7 @@ def strip_lists(src_path, dst_path):
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
-        print('usage: python ply_strip.py <input.ply> <output.ply>')
+        print('用法：python ply_strip.py <输入.ply> <输出.ply>')
         sys.exit(2)
     count = strip_lists(sys.argv[1], sys.argv[2])
-    print('done: %d vertices (%d bytes/vertex)' % (count, 27))
+    print('完成：%d 个顶点，27 字节/顶点' % count)

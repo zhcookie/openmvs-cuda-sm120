@@ -1,161 +1,163 @@
-# 报错对照表（症状 → 真因 → 解法）
+# 错误信息索引
 
-按"你看到的那句话"查。
+按错误信息检索对应条目。每条包含现象、根因与处理方式。
 
 ---
 
-## A. CUDA / 显卡相关
+## A. CUDA 与显卡
 
-### `named symbol not found (code 500)`
+### A1. `named symbol not found (code 500)`
 
-**真因**：exe 里没有你这张显卡可执行的 GPU 内核 —— 要么是官方 sm_89 包跑在 RTX 50 系上，要么 PATH 里命中的是旧的官方包。
+**根因**：可执行文件不含当前设备可加载的 GPU 内核。常见来源为调用上游 `sm_89` 构建，或 `Path` 中旧版本目录优先命中。
 
-**排查与解法**：
+**处理**：
 
 ```powershell
-# 1) 先确认你到底在跑哪个 exe
+# 确认实际调用的文件
 where.exe DensifyPointCloud
 
-# 2) 再看它的架构
+# 读取其内嵌架构
 .\tools\check_cuda_arch.ps1 (where.exe DensifyPointCloud)
 ```
 
-- `CubinArch` 显示 `sm_89` 或 `-` → 命中的不是本包。把 PATH 里旧目录删掉，或直接用绝对路径调用本包。
-- `CubinArch` 显示 `sm_120` 却仍报错 → 驱动太旧，升级到 R580+。
+`CubinArch` 为 `sm_89` 或 `-` 时，所调用文件非本仓库构建，应移除 `Path` 中的旧目录，或改用绝对路径调用本分发包中的可执行文件。`CubinArch` 为 `sm_120` 而错误仍存在时，检查显示驱动版本是否满足 CUDA 13.x 的要求。
 
-### `no kernel image is available for execution on the device`
+### A2. `no kernel image is available for execution on the device`
 
-同上，另一个措辞。同一个走法。
+与 A1 同源，处理方式相同。
 
-### `Invalid CUDA GPU selected (1 vs 1)`
+### A3. `Invalid CUDA GPU selected (1 vs 1)`
 
-**真因**：把**任务管理器的 GPU 编号**当成了 CUDA 编号。任务管理器里核显可能占 "GPU 0"、独显是 "GPU 1"；而 CUDA **只数 NVIDIA 卡**，独显永远是 `0`。
+**根因**：使用了任务管理器显示的显卡编号。任务管理器将核显编号为 GPU 0、独立显卡编号为 GPU 1，而 CUDA 仅枚举 NVIDIA 设备，独立显卡的 CUDA 编号为 `0`。
 
-**解法**：钉死 0。
+**处理**：将设备编号固定为 `0`。
 
 ```powershell
 DensifyPointCloud -i scene.mvs -o scene_dense.mvs --cuda-device 0
 ```
 
-COLMAP 侧同理：
+COLMAP 侧对应参数：
 
 ```powershell
-# feature_extractor / exhaustive_matcher 里都改成
 --FeatureExtraction.gpu_index 0
 --FeatureMatching.gpu_index 0
 ```
 
-### `CUDA driver version is insufficient for CUDA runtime version`
+### A4. `CUDA driver version is insufficient for CUDA runtime version`
 
-**真因**：驱动版本低于 CUDA 13.x 的要求。
-**解法**：升级 NVIDIA 驱动到 R580 或更新。不需要装 CUDA Toolkit。
+**根因**：显示驱动版本低于 CUDA 13.x 的最低要求。
 
-### 提特征 / 稠密化一启动就闪退，没有报错
+**处理**：将 NVIDIA 驱动升级至 R580 或更新版本。无需安装 CUDA Toolkit。
 
-**真因**：显存被别的程序占满了（浏览器、Lightroom、剪映、另一个 CUDA 进程），SIFT / 深度图纹理申请失败直接退出。
+### A5. 特征提取或稠密化启动后立即退出，无错误输出
+
+**根因**：显存被其它进程占用，SIFT 特征提取或深度图计算申请显存失败，进程直接终止。
+
+**处理**：
 
 ```powershell
 nvidia-smi
 ```
 
-看 `Used` 那一列。跑 GPU 阶段前把大户关掉。12 GB 卡跑 3200px、百来张照片是舒服的；同时开 Lightroom 就不一定了。
+查看 `Used` 列。在执行 GPU 阶段前关闭占用显存的进程。12 GB 显存设备处理 3200px、约百张影像时余量有限，与其它图形应用并行运行可能导致失败。
 
-### `out of memory` / 稠密化跑到一半挂掉
+### A6. `out of memory`，或稠密化中途终止
 
-**解法**（按性价比排序）：
+**处理**，按改动成本由低到高排列：
 
-1. 降分辨率：`--max_image_size 2000`（COLMAP `image_undistorter` 那步就要一起降）
-2. 分批：把照片分成 2~3 组分别重建
-3. 减深度图分辨率：`DensifyPointCloud --resolution-level 1`
+1. 降低分辨率：COLMAP `image_undistorter` 与 OpenMVS 同时将 `--max_image_size` 设为 `2000`
+2. 分批处理：将影像划分为 2 至 3 组分别重建
+3. 降低深度图分辨率：`DensifyPointCloud --resolution-level 1`
 
 ---
 
-## B. COLMAP 相关
+## B. COLMAP
 
-### `output_path is not a directory`
+### B1. `output_path is not a directory`
 
-**真因**：`colmap mapper` 只往**已存在的目录**里写 `0/`、`1/` 子目录，自己不会建。
-**解法**：
+**根因**：`colmap mapper` 仅在已存在的目录内写入 `0/`、`1/` 等子目录，不创建上级目录。
+
+**处理**：
 
 ```powershell
 mkdir build\sparse
 colmap mapper --output_path build\sparse ...
 ```
 
-### 解出来两个模型（`sparse\0`、`sparse\1`）
+### B2. 重建结果分裂为 `sparse\0` 与 `sparse\1` 两个模型
 
-不是错误。mapper 有时会把数据裂成两半。挑点数最多的那个：
+该现象属正常行为。mapper 可能将数据划分为多个子模型。选取点数最多的模型作为后续输入：
 
 ```powershell
 Get-ChildItem build\sparse -Recurse -Filter points3D.bin |
   Sort-Object Length -Descending | Select-Object -First 1
 ```
 
-用它的父目录做 `image_undistorter --input_path`。
+以其父目录作为 `image_undistorter --input_path` 的取值。
 
-### `SQLite error` / 数据库锁
+### B3. `SQLite error` 或数据库被占用
 
-上一个 COLMAP 进程还没退干净。等它退出，或换个 `--database_path`。
+上一个 COLMAP 进程尚未退出。待其结束后重试，或改用其它 `--database_path`。
 
 ---
 
-## C. OpenMVS 相关
+## C. OpenMVS
 
-### 稠密化报找不到图片 / 生成出 `dense\dense\images`
+### C1. 稠密化报告影像缺失，或生成双层 `dense\dense` 目录
 
-**真因**：`InterfaceCOLMAP --image-folder` 写了**相对路径**，OpenMVS 会把它拼到 `-i` 目录后面，形成双层 `dense`。
+**根因**：`InterfaceCOLMAP --image-folder` 使用相对路径。OpenMVS 将该路径拼接到 `-i` 参数所指目录之后，形成重复层级。
 
-**解法**：写绝对路径。
+**处理**：使用绝对路径。
 
 ```powershell
 InterfaceCOLMAP -i D:\data\build\dense -o D:\data\build\scene.mvs `
   --image-folder D:\data\build\dense\images
 ```
 
-### `TextureMesh` 报 mesh 太大 / 内存不足
+### C2. `TextureMesh` 报告网格规模过大或内存不足
 
-先 `ReconstructMesh --decimate 0.5` 降面数，再贴图。或 `RefineMesh` 时加 `--max-face-area 64`。
+先以 `ReconstructMesh --decimate 0.5` 降低面数，再执行纹理映射；或在 `RefineMesh` 中设置 `--max-face-area 64`。
 
-### 想跑 Viewer 但目录里没有
+### C3. 目录中缺少 `Viewer.exe`
 
-本构建未启用 `viewer` 特性（见 README「已知限制」）。用 CloudCompare / MeshLab 打开输出文件即可。
+本构建未启用 `viewer` 特性，详见 README 第 10 节。模型查看可使用 CloudCompare 或 MeshLab。
 
 ---
 
-## D. 输出文件相关
+## D. 输出文件
 
-### CloudCompare 打开点云报 `nothing to load` / 打开后一个点都没有
+### D1. CloudCompare 报告 `nothing to load`，或加载后无顶点
 
-**真因**：OpenMVS 的 PLY 每点带 `property list uchar view_indices` + `property list float view_weights`（可见视图索引），是**可变长列表**。CloudCompare 的 PLY 解析器不支持可变长属性，读到第一个点就废了。
+**根因**：OpenMVS 输出的 PLY 为每个顶点附加 `view_indices` 与 `view_weights` 两个可变长属性。CloudCompare 的 PLY 解析器不支持可变长属性，解析中断。
 
-**解法**：
+**处理**：
 
 ```powershell
 python tools\ply_strip.py scene_dense.ply scene_dense_clean.ply
 ```
 
-输出固定 27 字节/点（xyz 12 + rgb 3 + 法线 12），体积约降到原来的 43%。
+输出固定为 27 字节/顶点（坐标 12 字节、颜色 3 字节、法向量 12 字节），体积约为原始文件的 43%。
 
-### `ply_strip.py` 报 `struct.error` / 点数为 0
+### D2. `ply_strip.py` 抛出 `struct.error`，或输出顶点数为 0
 
-输入的 PLY 不是 OpenMVS 的输出格式（比如已经是 ASCII 或别的软件导的）。本工具只处理 **binary_little_endian** 且每点在 xyz 之后紧跟两个 `property list` 的 OpenMVS 原始输出。
+输入文件不符合 OpenMVS 的输出格式（例如为 ASCII PLY，或由其它软件导出）。该工具仅处理 `binary_little_endian` 且每个顶点在 xyz 之后紧跟两个可变长属性的文件。
 
-### 文件名带 `(1)`、路径有中文
+### D3. 文件名含 `(1)`，或路径含非 ASCII 字符
 
-OpenMVS 的老代码对非 ASCII 路径不稳。把工程放在纯英文、无空格目录下最省心。
+OpenMVS 的部分路径处理代码对非 ASCII 路径支持不完善。将工程置于纯 ASCII、无空格目录下可避免此类问题。
 
 ---
 
-## E. 环境相关
+## E. 运行环境
 
-### 双击 exe 一闪而过
+### E1. 双击可执行文件后窗口立即关闭
 
-它是命令行工具，不是 GUI。开 PowerShell 敲。
+这些工具为命令行程序，无图形界面。应在 PowerShell 或命令提示符中调用。
 
-### 提示缺少 `VCRUNTIME140.dll` / `MSVCP140.dll`
+### E2. 提示缺少 `VCRUNTIME140.dll` 或 `MSVCP140.dll`
 
-装 [Microsoft Visual C++ 2015-2022 Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe)。
+安装 Microsoft Visual C++ 2015-2022 Redistributable (x64)：<https://aka.ms/vs/17/release/vc_redist.x64.exe>
 
-### 杀软报毒 / 拦下载
+### E3. 安全软件将可执行文件判为可疑
 
-静态链接的未知 exe 常被启发式误报。源码与配方全在 `source/`，可自行编译核对。
+静态链接的未签名可执行文件常触发启发式判定。源码与构建配方完整收录于 `source/`，可自行编译比对。
