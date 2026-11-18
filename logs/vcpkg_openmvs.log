@@ -1,0 +1,43 @@
+﻿Computing installation plan...
+The following packages will be built and installed:
+    openmvs[core,cuda,openmp,tools]:x64-windows-sm120@2.3.0#1
+Detecting compiler hash for triplet x64-windows-sm120...
+Compiler found: D:/app/visualstudio/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe
+Restored 0 package(s) from C:\Users\<user>\AppData\Local\vcpkg\archives in 32.8 us. Use --debug to see more details.
+Installing 1/1 openmvs[core,cuda,openmp,tools]:x64-windows-sm120@2.3.0#1...
+openmvs[core,cuda,openmp,tools]:x64-windows-sm120@2.3.0#1 package ABI: d6ec61b8efbacc29b5f830c4effac965c78c9b3439b1fb288540f5da74aaa8b4
+Building openmvs[core,cuda,openmp,tools]:x64-windows-sm120@2.3.0#1...
+-- Using cached cdcseacave-openMVS-v2.3.0.tar.gz
+-- Extracting source D:/app/vcpkg/downloads/cdcseacave-openMVS-v2.3.0.tar.gz
+-- Applying patch ambiguous-uint_t.diff
+-- Applying patch cmake.diff
+-- Applying patch common-log.diff
+-- Applying patch devendor.diff
+-- Applying patch interface-metashape.diff
+-- Applying patch missing-include.diff
+-- Applying patch no-absolute-paths.patch
+-- Applying patch cuda-13.diff
+-- Using source at D:/app/vcpkg/buildtrees/openmvs/src/v2.3.0-ee27b65b2c.clean
+-- Found CUDA V13.1.80
+-- Configuring x64-windows-sm120
+-- Building x64-windows-sm120-dbg
+-- Building x64-windows-sm120-rel
+-- Installing: D:/app/vcpkg/packages/openmvs_x64-windows-sm120/tools/openmvs/MvgMvsPipeline.py
+-- Installing: D:/app/vcpkg/packages/openmvs_x64-windows-sm120/tools/openmvs/MvgOptimizeSfM.py
+-- Installing: D:/app/vcpkg/packages/openmvs_x64-windows-sm120/share/openmvs/usage
+-- Installing: D:/app/vcpkg/packages/openmvs_x64-windows-sm120/share/openmvs/copyright
+-- Performing post-build validation
+Starting submission of openmvs[core,cuda,openmp,tools]:x64-windows-sm120@2.3.0#1 to 1 binary cache(s) in the background
+Elapsed time to handle openmvs:x64-windows-sm120: 6.8 min
+Total install time: 6.8 min
+Installed contents are licensed to you by owners. Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Packages installed in this vcpkg installation declare the following licenses:
+AGPL-3.0-only
+openmvs provides CMake targets:
+
+  find_package(OpenMVS CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE OpenMVS::MVS)
+
+Waiting for 1 remaining binary cache submissions...
+Completed submission of openmvs[core,cuda,openmp,tools]:x64-windows-sm120@2.3.0#1 to 1 binary cache(s) in 22 s (1/1)
+All requested installations completed successfully in: 6.8 min

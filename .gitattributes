@@ -1,0 +1,29 @@
+# 默认：文本按 LF 存储，检出时按各平台习惯还原
+* text=auto eol=lf
+
+# 二进制：绝对不能被行尾转换或合并驱动碰
+*.exe   binary
+*.dll   binary
+*.lib   binary
+*.exp   binary
+*.pdb   binary
+*.zip   binary
+*.7z    binary
+*.png   binary
+*.jpg   binary
+*.ply   binary
+*.mvs   binary
+*.cubin binary
+
+# Windows 脚本用 CRLF，避免 PS 5.1 解析异常
+*.ps1   text eol=crlf
+*.bat   text eol=crlf
+
+# Unix 风格脚本与源码用 LF
+*.py    text eol=lf
+*.sh    text eol=lf
+*.md    text eol=lf
+*.cmake text eol=lf
+*.diff  text eol=lf
+*.patch text eol=lf
+*.json  text eol=lf

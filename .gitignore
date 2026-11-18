@@ -1,0 +1,33 @@
+# 构建与运行产生的中间文件
+build/
+out/
+dense/
+sparse/
+*.mvs
+*.ply
+*.dmap
+depth*.bin
+depth*.dat
+depth*.txt
+*.log.bak
+*.tmp
+
+# Visual Studio / CMake
+.vs/
+CMakeCache.txt
+CMakeFiles/
+*.sln
+*.vcxproj*
+*.user
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 编辑器
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
